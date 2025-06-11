@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import subprocess
 import time
+from datetime import datetime
 import google.generativeai as genai
 from dotenv import load_dotenv
 from st_copy_to_clipboard import st_copy_to_clipboard
@@ -17,11 +18,24 @@ st.set_page_config(
     layout="centered"
 )
 
-st.title("🎬 Transkrip Video Otomatis")
-st.write("Masukkan URL video dari YouTube, Instagram, TikTok, atau platform lain yang didukung.")
+st.title("🎬 Transkrip Media Sosial Otomatis")
+st.write("Masukkan URL postingan dari YouTube, Instagram, TikTok, atau platform lain yang didukung.")
+
+
+# ==== Metode Analisis====
+format_options = {
+    "Audio (untuk kebutuhan cepat)": "mp3",
+    "Video (untuk analisis kompleks)": "mp4"
+}
+selected_format_label = st.radio(
+    "Pilih metode analisis yang dibutuhkan:",
+    options=format_options.keys(),
+    horizontal=True
+)
+file_format = format_options[selected_format_label]
 
 # ==== Input URL Video ====
-video_url = st.text_input("🔗 Masukkan URL Video", placeholder="https://www.instagram.com/p/xxxxx/")
+video_url = st.text_input("🔗 Masukan URL", placeholder="https://www.instagram.com/p/xxxxx/", key="url_input")
 
 # ==== Jika URL sudah dimasukkan ====
 if video_url:
@@ -35,24 +49,37 @@ if video_url:
         except Exception as e:
             st.error("Gagal mengonfigurasi API Key.")
             st.stop()
+    
+    timestamp_format = "%Y%m%d_%H%M%S"
+    current_time_str = datetime.now().strftime(timestamp_format)
+    output_filename = f"file_{current_time_str}.{file_format}"
 
-    output_filename = "audio.mp3"
-
-    with st.spinner("📥 Mengunduh video dan konversi ke audio..."):
+    with st.spinner("📥 Mengunduh file.."):
         try:
-            command = [
-                'yt-dlp',
-                '--quiet',
-                # Opsi untuk mengekstrak audio dan mengkonversinya ke mp3
-                '--extract-audio',
-                '--audio-format', 'mp3',
-                # Opsi untuk menjaga kualitas audio terbaik
-                '--audio-quality', '0', # 0 berarti kualitas terbaik
-                '-o', output_filename,
-                video_url
-            ]
+
+            if file_format=="mp3":
+                command = [
+                    'yt-dlp',
+                    '--quiet',
+                    # Opsi untuk mengekstrak audio dan mengkonversinya ke mp3
+                    '--extract-audio',
+                    '--audio-format', 'mp3',
+                    # Opsi untuk menjaga kualitas audio terbaik
+                    '--audio-quality', '0', # 0 berarti kualitas terbaik
+                    '-o', output_filename,
+                    video_url
+                ]
+            elif file_format=="mp4":
+                command = [
+                    'yt-dlp',
+                    '--quiet',
+                    '-f', 'best[ext=mp4]',
+                    '-o', output_filename,
+                    video_url
+                ]
+            
             subprocess.run(command, check=True, capture_output=True, text=True)
-            st.success(f"✅ Audio berhasil diunduh dan disimpan sebagai: '{output_filename}'")
+            st.success(f"✅ File berhasil diunduh dan disimpan sebagai: '{output_filename}'")
                     
         except subprocess.CalledProcessError as e:
             st.error(f"❌ Gagal mengunduh video.\n{e.stderr}")
@@ -84,7 +111,7 @@ if video_url:
 
                 #checker status active file
                 if file_status == "ACTIVE":
-                    st.success(f"✅ Video siap diproses!, Status: {file_status}")
+                    st.success(f"✅ File siap diproses!, Status: {file_status}")
                     countdown_placeholder.empty()
                     break
                 elif file_status == "FAILED":
@@ -109,13 +136,14 @@ if video_url:
             prompt = [
                 "Anda adalah seorang ahli transkripsi. Tolong transkripsikan audio dari video ini ke dalam Bahasa Indonesia.",
                 "Tuliskan transkripnya secara lengkap dan akurat, kata per kata.",
+                "Kembalikan hanya teks transkripsinya, tanpa kalimat pembuka atau tambahan lainnya.",
                 uploaded_file
             ]
             response = model.generate_content(prompt, request_options={'timeout': 600})
             st.success("✅ Transkrip berhasil dibuat!")
             st.subheader("📄 Hasil Transkrip:")
-            st_copy_to_clipboard(response.text)
             st.text_area("Transkrip:", response.text, height=400)
+            st_copy_to_clipboard(response.text)
         
         except Exception as e:
             st.error(f"❌ Gagal membuat transkrip: {e}")
@@ -126,5 +154,6 @@ if video_url:
             os.remove(output_filename)
             genai.delete_file(uploaded_file.name)
             st.success("✅ File lokal dan file server berhasil dihapus.")
+
         except Exception as e:
             st.warning(f"⚠️ Terjadi kesalahan saat menghapus file: {e}")
