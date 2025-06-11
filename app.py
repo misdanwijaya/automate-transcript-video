@@ -35,10 +35,10 @@ selected_format_label = st.radio(
 file_format = format_options[selected_format_label]
 
 # ==== Input URL Video ====
-video_url = st.text_input("🔗 Masukan URL", placeholder="https://www.instagram.com/p/xxxxx/", key="url_input")
+file_url = st.text_input("🔗 Masukan URL", placeholder="https://www.instagram.com/p/xxxxx/", key="url_input")
 
 # ==== Jika URL sudah dimasukkan ====
-if video_url:
+if file_url:
     if not api_key:
         st.error("API key tidak ditemukan. Pastikan file .env berisi GOOGLE_API_KEY.")
         st.stop()
@@ -67,7 +67,7 @@ if video_url:
                     # Opsi untuk menjaga kualitas audio terbaik
                     '--audio-quality', '0', # 0 berarti kualitas terbaik
                     '-o', output_filename,
-                    video_url
+                    file_url
                 ]
             elif file_format=="mp4":
                 command = [
@@ -75,7 +75,7 @@ if video_url:
                     '--quiet',
                     '-f', 'best[ext=mp4]',
                     '-o', output_filename,
-                    video_url
+                    file_url
                 ]
             
             subprocess.run(command, check=True, capture_output=True, text=True)
