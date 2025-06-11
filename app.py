@@ -1,7 +1,7 @@
 import streamlit as st
 import subprocess
 from st_copy_to_clipboard import st_copy_to_clipboard
-from module import download_file, upload_to_gemini, get_transcript, delete_file
+from module import is_valid_url, download_file, upload_to_gemini, get_transcript, delete_file
 
 # ==== Konfigurasi halaman Streamlit ====
 st.set_page_config(
@@ -31,6 +31,12 @@ file_url = st.text_input("🔗 Masukan URL", placeholder="https://www.instagram.
 # ==== Jika URL sudah dimasukkan ====
 if file_url:
 
+    # ==== Checker URL ====
+    if not is_valid_url(file_url):
+        st.error("URL tidak sah. Harap masukkan URL yang benar (contoh: https://www.youtube.com/...).")
+        st.stop() # Menghentikan eksekusi jika URL tidak sah
+
+    # ==== Download File ====
     with st.spinner("📥 Mengunduh file.."):
         try:
 
@@ -41,6 +47,7 @@ if file_url:
             st.error(f"❌ Gagal mengunduh video.\n{e.stderr}")
             st.stop()
 
+    # ==== Upload File ke Gemini ====
     with st.spinner("☁️ Mengunggah ke Gemini File API..."):
         try:
             uploaded_file=upload_to_gemini(output_filename)
@@ -49,6 +56,7 @@ if file_url:
             st.error(f"❌ Gagal upload ke Gemini: {e}")
             st.stop()
 
+    # ==== Transkrip File ====
     with st.spinner("🧠 Meminta transkrip dari Gemini... (maks 10 menit)"):
         try:
             
@@ -62,6 +70,7 @@ if file_url:
             st.error(f"❌ Gagal membuat transkrip: {e}")
             st.stop()
 
+    # ==== Delete File ====
     with st.spinner("🧹 Membersihkan file sementara..."):
         try:
             delete_file(output_filename,uploaded_file)

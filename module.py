@@ -1,6 +1,6 @@
 from datetime import datetime
 from dotenv import load_dotenv
-
+from urllib.parse import urlparse
 import streamlit as st
 import os
 import subprocess
@@ -13,6 +13,16 @@ api_key = os.getenv("GOOGLE_API_KEY")
 #konfigurasi genai
 genai.configure(api_key=api_key)
 
+def is_valid_url(url):
+    """Memeriksa apakah sebuah URL memiliki format yang benar (memiliki skema dan nama domain)."""
+    try:
+        result = urlparse(url)
+        # URL dianggap valid jika memiliki skema (http/https) DAN nama domain (netloc)
+        return all([result.scheme, result.netloc])
+    except:
+        # Jika terjadi error saat parsing, URL dianggap tidak valid
+        return False
+    
 def download_file(file_format,file_url):
     timestamp_format = "%Y%m%d_%H%M%S"
     current_time_str = datetime.now().strftime(timestamp_format)
